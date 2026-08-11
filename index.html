@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Kitchen Ops</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#39504a">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --paper:#eef1ee; --paper-raised:#f7f9f6; --ink:#1c2622; --ink-soft:#5b6660;
+    --line:#c9d0c8; --steel:#39504a; --steel-dark:#2b3d38;
+    --go:#2f6f4e; --go-bg:#e2efe6; --stop:#b3402a; --stop-bg:#f6e4de;
+    --amber:#b8863a; --amber-bg:#f5ecda; --stamp:#1b3a5c; --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  .headline{font-family:'Oswald','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:0.04em;}
+  .mono{font-family:'IBM Plex Mono','SF Mono',Consolas,monospace;}
+  #app{max-width:520px;margin:0 auto;padding:0 0 100px;}
+
+  header.top{background:var(--steel);color:#eef4ef;padding:22px 20px 20px;position:relative;overflow:hidden;}
+  header.top::after{content:"";position:absolute;right:-40px;top:-40px;width:140px;height:140px;border:2px solid rgba(255,255,255,0.08);border-radius:50%;}
+  header.top .eyebrow{font-size:11px;letter-spacing:0.16em;opacity:0.7;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;}
+  header.top h1{font-size:24px;margin:4px 0 2px;font-weight:600;}
+  header.top .sub{font-size:13px;opacity:0.85;font-family:'IBM Plex Mono',monospace;}
+  .icon-btn{position:absolute;top:18px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;color:#eef4ef;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .icon-btn:active{background:rgba(255,255,255,0.24);}
+  .icon-btn.gear{right:18px;}
+  .icon-btn.back{left:18px;}
+
+  .progress-bar{height:5px;background:rgba(0,0,0,0.08);margin:0 20px;border-radius:4px;overflow:hidden;transform:translateY(-8px);}
+  .progress-fill{height:100%;background:var(--go);width:0%;transition:width 0.3s ease;}
+
+  section.card{background:var(--paper-raised);margin:16px 16px 0;border-radius:var(--radius);border:1px solid var(--line);padding:16px;}
+
+  label.field-label{display:block;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;}
+  select, input[type=text], input[type=number], textarea{width:100%;padding:12px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:16px;color:var(--ink);font-family:inherit;}
+  textarea{resize:vertical;min-height:70px;}
+  select:focus, input:focus, textarea:focus{outline:2px solid var(--steel);outline-offset:1px;}
+  .field-gap{margin-top:14px;}
+
+  .task-list{margin-top:14px;}
+  .task-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);}
+  .task-row:last-child{border-bottom:none;}
+  .task-name{font-size:14.5px;line-height:1.35;flex:1;}
+  .task-sub{font-size:12px;color:var(--ink-soft);display:block;margin-top:2px;}
+  .task-num{font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);font-size:12px;margin-right:8px;}
+  .toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);flex-shrink:0;}
+  .toggle button{border:none;background:#fff;padding:9px 14px;font-size:13px;font-weight:600;font-family:'IBM Plex Mono',monospace;cursor:pointer;color:var(--ink-soft);}
+  .toggle button.pos.active{background:var(--go);color:#fff;}
+  .toggle button.neg.active{background:var(--stop);color:#fff;}
+  .toggle button:first-child{border-right:1px solid var(--line);}
+  input.num-input{width:88px;flex-shrink:0;padding:9px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;}
+
+  .submit-bar{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:linear-gradient(to top, var(--paper) 60%, rgba(238,241,238,0));padding:18px 16px 20px;}
+  .submit-btn{width:100%;padding:15px;border-radius:10px;border:none;background:var(--steel);color:#fff;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.05em;font-size:15px;font-weight:600;cursor:pointer;}
+  .submit-btn:disabled{opacity:0.45;cursor:not-allowed;}
+  .submit-hint{text-align:center;font-size:11px;color:var(--ink-soft);margin-top:8px;font-family:'IBM Plex Mono',monospace;}
+
+  .today-log{margin-top:14px;}
+  .log-entry{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:8px 0;border-bottom:1px dashed var(--line);font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);}
+  .log-entry:last-child{border-bottom:none;}
+  .log-entry b{color:var(--ink);font-weight:600;}
+  .log-entry.fail{color:var(--stop);}
+
+  .stamp-overlay{position:fixed;inset:0;background:rgba(28,38,34,0.6);display:flex;align-items:center;justify-content:center;z-index:50;opacity:0;pointer-events:none;transition:opacity 0.25s ease;}
+  .stamp-overlay.show{opacity:1;pointer-events:auto;}
+  .stamp-card{background:#fff;border-radius:14px;padding:36px 28px;max-width:320px;text-align:center;transform:scale(0.85);transition:transform 0.3s cubic-bezier(.2,1.4,.4,1);}
+  .stamp-overlay.show .stamp-card{transform:scale(1);}
+  .stamp-mark{width:96px;height:96px;border:4px solid var(--stamp);border-radius:50%;color:var(--stamp);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;transform:rotate(-12deg);font-family:'Oswald',sans-serif;text-transform:uppercase;font-weight:700;font-size:14px;letter-spacing:0.05em;}
+  .stamp-card h2{margin:0 0 6px;font-family:'Oswald',sans-serif;text-transform:uppercase;}
+  .stamp-card p{margin:0;font-size:13px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .stamp-close{margin-top:20px;background:var(--steel);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:13px;cursor:pointer;}
+
+  .setup-screen{padding:24px 20px;}
+  .setup-screen h2{font-family:'Oswald',sans-serif;text-transform:uppercase;margin-top:0;}
+  .setup-screen p{font-size:14px;color:var(--ink-soft);line-height:1.5;}
+  .setup-screen textarea{min-height:90px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+  .setup-screen label.field-label{margin-top:16px;}
+  .save-btn{margin-top:20px;width:100%;padding:14px;background:var(--steel);color:#fff;border:none;border-radius:10px;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.05em;font-size:14px;cursor:pointer;}
+  .status-msg{font-size:12.5px;margin-top:10px;font-family:'IBM Plex Mono',monospace;}
+  .status-msg.ok{color:var(--go);}
+  .status-msg.err{color:var(--stop);}
+  .link-row{display:flex;justify-content:space-between;align-items:center;margin-top:18px;}
+  .link-row button{background:none;border:none;color:var(--steel);font-family:'IBM Plex Mono',monospace;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:0;}
+
+  /* Home grid */
+  .home-grid{padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .home-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+  .home-card:active{background:#eef2ee;}
+  .home-card .hc-title{font-size:15px;font-weight:600;}
+  .home-card .hc-sub{font-size:12px;color:var(--ink-soft);margin-top:3px;font-family:'IBM Plex Mono',monospace;}
+  .hc-badge{font-size:11px;font-family:'IBM Plex Mono',monospace;padding:4px 9px;border-radius:20px;font-weight:600;white-space:nowrap;}
+  .hc-badge.done{background:var(--go-bg);color:var(--go);}
+  .hc-badge.pending{background:var(--stop-bg);color:var(--stop);}
+  .hc-badge.partial{background:var(--amber-bg);color:var(--amber);}
+
+  .chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .chip{padding:9px 14px;border-radius:20px;border:1px solid var(--line);background:#fff;font-size:12.5px;font-family:'IBM Plex Mono',monospace;cursor:pointer;color:var(--ink-soft);}
+  .chip.active{background:var(--steel);color:#fff;border-color:var(--steel);}
+
+  .item-input-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);}
+  .item-input-row:last-child{border-bottom:none;}
+  .item-name{font-size:14px;flex:1;}
+  .item-unit{font-size:11px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+
+  datalist{}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============ CONFIG ============ */
+const DEFAULT_CONFIG = {
+  webAppUrl: '',
+  managers: ["Manager 1", "Manager 2"],
+  chefs: ["Chef 1", "Chef 2"],
+  morningTasks: [
+    "Outlet unlocked and lights switched on",
+    "Kitchen cleaned and sanitized",
+    "Water supply checked",
+    "Gas connection checked for leakage",
+    "Refrigerator temperature checked",
+    "Freezer temperature checked",
+    "Dry waste and wet waste bins lined with fresh bags",
+    "Raw material inventory checked & prepared materials inventory checked",
+    "Packing area cleaned & front area cleaned"
+  ],
+  closingTasks: [
+    "Last order completed and dispatched",
+    "All food items covered and labelled",
+    "Remaining cooked food quantity recorded",
+    "Raw material stock updated",
+    "Next day's purchase requirements noted",
+    "Refrigerator cleaned and organized",
+    "Freezer cleaned and organized",
+    "Kitchen platform cleaned and sanitized",
+    "Cooking utensils washed and stored",
+    "Chopping boards cleaned and sanitized",
+    "Sink cleaned",
+    "Floor swept and mopped",
+    "Dry waste disposed",
+    "Wet waste disposed",
+    "Gas knobs turned off",
+    "Gas unplugged closed & kept inside",
+    "Electrical equipment switched off",
+    "Lights switched off (except required appliances)",
+    "Refrigerator running properly",
+    "Freezer running properly",
+    "Outlet locked and secured"
+  ],
+  inventoryItems: [
+    "Cooked Fish","Cooked Mutton","Cooked Chicken","Egg Curry Cooked","Dal","Boiled Rice",
+    "Green Chutney","Red Chutney","Baingan Chokha","Aloo Chokha","Pitha Filling","Sattu Mixture",
+    "Litti Balls","Nenua (Turai) Sabji","Lauki Sabji","Chana Ghughni","Chicken Tash","Kneaded Dough",
+    "Imli Paste","Ginger Paste","Red Chilli Paste","Chopped Bhindi","Chopped Potato","Chopped Cauliflower",
+    "Chopped Garlic","Chopped Green Chilli","Chopped Onion","Chopped Coriander","Sliced Onion",
+    "Soaked Masoor Dal","Grated Boiled Potato","Gulab Jamun","Kala Jamun","Samosa/Singhada","Khaja",
+    "Bundi","Malpua","Rabri","Parwal Aloo Sabji","Besan Sabji - Sarso Gravy","Paneer Sabji",
+    "Bhindi Masala","Matar Chola","Salad (Kheera/Onion/Chilli/Lemon)","Papdi (for Papdi Chaat)","Aloo Chop"
+  ],
+  wastageItems: [
+    {name:"Cooked Chicken", unit:"Kgs"}, {name:"Cooked Mutton", unit:"Kgs"}, {name:"Cooked Fish", unit:"Kgs"},
+    {name:"Dal", unit:"Kgs"}, {name:"Boiled Rice", unit:"Kgs"}, {name:"Green Chutney", unit:"Kgs"},
+    {name:"Red Chutney", unit:"Kgs"}, {name:"Baingan Chokha", unit:"Kgs"}, {name:"Aloo Chokha", unit:"Kgs"},
+    {name:"Pitha Filling", unit:"Kgs"}, {name:"Sattu Mixture", unit:"Kgs"}, {name:"Kneaded Dough", unit:"Kgs"},
+    {name:"Ginger Paste", unit:"Kgs"}, {name:"Red Chilli Paste", unit:"Kgs"}, {name:"Cooked Aloo Bhujia", unit:"Kgs"},
+    {name:"Cooked Bhindi Bhujia", unit:"Kgs"}, {name:"Cooked Gobhi Aloo Bhujia", unit:"Kgs"}, {name:"Kheer", unit:"Kgs"},
+    {name:"Sliced Onion", unit:"Kgs"}, {name:"Litti Balls", unit:"Pieces"}, {name:"Pitha Boiled", unit:"Pieces"},
+    {name:"Rotis", unit:"Pieces"}, {name:"Paratha", unit:"Pieces"}, {name:"Aloo Paratha", unit:"Pieces"},
+    {name:"Sattu Paratha", unit:"Pieces"}
+  ],
+  wastageReasons: [
+    {code:"OP", label:"Over Production"}, {code:"LO", label:"Low Orders"}, {code:"SP", label:"Spoilage"},
+    {code:"QC", label:"Quality Issue"}, {code:"EX", label:"Expired Shelf Life"}, {code:"DM", label:"Damaged During Handling"},
+    {code:"WR", label:"Wrong Recipe/Batch"}, {code:"OC", label:"Over Cooked"}, {code:"BR", label:"Burnt"}, {code:"OT", label:"Other"}
+  ],
+  qualityMenuItems: [
+    "Bihari Chicken Curry","Bihari Fish Curry (Sarso Wali)","Champaran Mutton Curry","Chicken Roti Combo",
+    "Litti Chokha","Pahuna Dal Bhaat Chokha Thali","2 Sattu Parathas With Champaran Mutton Curry",
+    "3 Paratha With Champaran Mutton Curry","Bihari Chicken Curry & 2 Sattu Parathas","Bihari Chicken Curry - Family Pack",
+    "Bihari Chicken Curry With 3 Triangle Parathas","Bihari Chicken Curry With Chuda","Bihari Chicken Curry With Rice Meal | Chicken Bhaat",
+    "Bihari Chicken Fry | Chicken Taash","Bihari Egg Bhurji","Bihari Egg Curry","Bihari Fish Curry And 4 Phulka Roti",
+    "Bihari Fish Curry With Rice","Bihari Omelette","Champaran Mutton Curry - Family Pack","Litti & Champaran Mutton Curry",
+    "Litti + Bihari Chicken Curry","Aloo Kachalu","Bihar On A Plate | Litti + Dal Pitha","Chana Ghughni With Chuda",
+    "Dal Paratha With Kheer","Dal Paratha With Parwal Ki Sabji & Kheer","Dal Pitha","Dal Pithi","Sattu Kachori",
+    "Sattu Paratha","4 Phulka Roti With Aloo Bhujia","4 Phulka Roti With Bhindi Bhujia","4 Phulka Roti With Gobhi Aloo Bhujia",
+    "Bihari Non Veg Thali","Champaran Mutton Curry With Rice Thali","Pahuna Chana Ghughni Thali","Pahuna Aloo Bhujia Thali",
+    "Pahuna Bhindi Masala Thali","Pahuna Bhoj Thali 1 - Full Veg Thali","Pahuna Paneer Masala Thali","Pahuna Gobhi Aloo Bhujia Thali",
+    "Pahuna Besan Sabji Thali","Pahuna Bhindi Bhujia Thali","Pahuna Parwal Aloo Bhujia Thali","Pahuna Parwal Aloo Thali",
+    "Besan Ki Sabzi","Bhindi Masala","Bihari Paneer Masala","Ghugni | Kala Chana Ghugni","Lauki (Kaddu) Sabji",
+    "Nenua Chana Sabji","Parwal Aloo Sabzi","Aloo Paratha","Bihari Omelette + 3 Triangle Parathas","Chini Paratha",
+    "Gobi Paratha","Matar Paratha","Mooli Paratha","Paneer Paratha","Triangle Paratha With Aloo Bhujia",
+    "Triangle Paratha With Bhindi Bhujia","Triangle Paratha With Gobhi Aloo","Aloo Chop","Aloo Pakoda (Aloo Bachka)",
+    "Aloo Tikki Chaat","Chura Matar","Dahi Vada","Masoor Dal Pakoda","Onion Pakoda","Papdi Chaat","Samosa/Singhada",
+    "Samosa Chaat","Aloo Bhujia (Dry Sabji)","Bhindi Bhujia (Dry Sabji)","Ghee Roti","Ghee Triangle Paratha",
+    "Gobhi Aloo Bhujia (Dry Sabji)","Parwal Aloo Bhujia","Phulka Roti","Steamed Rice","Triangle Paratha","Yellow Dal",
+    "Boondi","Classic Thekua","Gulab Jamun","Kala Jamun","Khaja","Maharaja Gulab Jamun","Maharaja Kala Jamun",
+    "Malpua With Rabri","Pahuna Ghar Ki Kheer","Rasgulla","Bihari Masala Buttermilk","Bihari Sattu Sharbat",
+    "Ginger Tea Flask","Kadak Ginger Tea & Pakoda","Lemon Soda","Masala Coke","Masala Cola","Masala Fanta",
+    "Masala Thums Up","Nimbu Soda"
+  ]
+};
+
+let config = null;
+let screen = 'home';
+let todayLog = [];
+let formState = {};
+
+/* ============ UTIL ============ */
+function todayStr(){ return new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}); }
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+function nowStamp(){ return new Date().toLocaleString('en-GB', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}); }
+function timeOnly(){ return new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function storageGet(key, shared){
+  try{ const r = await window.storage.get(key, shared); return r ? JSON.parse(r.value) : null; }catch(e){ return null; }
+}
+async function storageSet(key, value, shared){
+  try{ await window.storage.set(key, JSON.stringify(value), shared); return true; }catch(e){ return false; }
+}
+
+async function loadConfig(){
+  const saved = await storageGet('config', true);
+  config = saved || JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+}
+
+async function logSubmission(entry){
+  entry.date = todayKey();
+  entry.time = timeOnly();
+  await storageSet(`log:${todayKey()}:${Date.now()}`, entry, true);
+}
+
+async function loadTodayLog(){
+  todayLog = [];
+  try{
+    const listRes = await window.storage.list(`log:${todayKey()}:`, true);
+    if(listRes && listRes.keys){
+      for(const k of listRes.keys){
+        const v = await storageGet(k, true);
+        if(v) todayLog.push(v);
+      }
+    }
+  }catch(e){}
+}
+
+async function postToSheet(payload){
+  if(!config.webAppUrl) return;
+  try{
+    await fetch(config.webAppUrl, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(payload)
+    });
+  }catch(e){}
+}
+
+function navigate(s){ screen = s; formState = {}; render(); window.scrollTo(0,0); }
+
+/* ============ RENDER ROOT ============ */
+function render(){
+  const app = document.getElementById('app');
+  if(!config.webAppUrl){ app.innerHTML = renderSetup(true); attachSetupHandlers(); return; }
+
+  if(screen === 'home') { app.innerHTML = renderHome(); attachHomeHandlers(); }
+  else if(screen === 'settings') { app.innerHTML = renderSetup(false); attachSetupHandlers(); }
+  else if(screen === 'morning') renderChecklistScreen({sheetName:'Morning Checklist', title:'Morning Checklist', tasks: config.morningTasks});
+  else if(screen === 'closing') renderChecklistScreen({sheetName:'Closing Checklist', title:'Closing Checklist', tasks: config.closingTasks});
+  else if(screen === 'inventory') renderInventoryScreen();
+  else if(screen === 'wastage') renderWastageScreen();
+  else if(screen === 'poultry') renderPoultryScreen();
+  else if(screen === 'quality') renderQualityScreen();
+}
+
+/* ============ HOME ============ */
+function statusBadge(text, kind){ return `<span class="hc-badge ${kind}">${text}</span>`; }
+
+function renderHome(){
+  const has = (pred) => todayLog.some(pred);
+  const morningDone = has(e => e.formType==='checklist' && e.sheetName==='Morning Checklist');
+  const closingDone = has(e => e.formType==='checklist' && e.sheetName==='Closing Checklist');
+  const invAM = has(e => e.formType==='checklist' && e.sheetName==='Kitchen Inventory' && e.shift==='Morning');
+  const invPM = has(e => e.formType==='checklist' && e.sheetName==='Kitchen Inventory' && e.shift==='Evening');
+  const wastageCheckpoints = new Set(todayLog.filter(e=>e.formType==='wastage').map(e=>e.checkpoint)).size;
+  const poultryDone = has(e => e.formType==='poultry');
+  const qualityEntries = todayLog.filter(e=>e.formType==='quality');
+  const qualityFails = qualityEntries.filter(e=>e.result==='Fail').length;
+
+  const cards = [
+    {id:'morning', title:'Morning Checklist', sub:'Opening tasks', badge: morningDone ? statusBadge('Done','done') : statusBadge('Pending','pending')},
+    {id:'closing', title:'Closing Checklist', sub:'End of day shutdown', badge: closingDone ? statusBadge('Done','done') : statusBadge('Pending','pending')},
+    {id:'inventory', title:'Kitchen Inventory', sub:'Cooked items \u2014 AM & PM', badge: (invAM&&invPM) ? statusBadge('Done','done') : (invAM||invPM) ? statusBadge('AM or PM left','partial') : statusBadge('Pending','pending')},
+    {id:'wastage', title:'Wastage Tracker', sub:'Opening \u00b7 2 checkpoints \u00b7 Closing', badge: wastageCheckpoints>=4 ? statusBadge('Done','done') : wastageCheckpoints>0 ? statusBadge(wastageCheckpoints+'/4 logged','partial') : statusBadge('Pending','pending')},
+    {id:'poultry', title:'Poultry Tracker', sub:'Daily inward & balance', badge: poultryDone ? statusBadge('Done','done') : statusBadge('Pending','pending')},
+    {id:'quality', title:'Quality Tasting', sub:'20 audits \u00b7 pass/fail', badge: qualityEntries.length>=20 ? statusBadge('20/20','done') : statusBadge(qualityEntries.length+'/20'+(qualityFails?' \u00b7 '+qualityFails+' fail':''), qualityFails?'partial':'pending')}
+  ];
+
+  return `
+    <header class="top">
+      <button class="icon-btn gear" id="open-settings" aria-label="Settings">&#9881;</button>
+      <div class="eyebrow">Pahuna Kitchen</div>
+      <h1 class="headline">Kitchen Ops</h1>
+      <div class="sub mono">${todayStr()}</div>
+    </header>
+    <div class="home-grid">
+      ${cards.map(c => `
+        <div class="home-card" data-nav="${c.id}">
+          <div>
+            <div class="hc-title">${c.title}</div>
+            <div class="hc-sub">${c.sub}</div>
+          </div>
+          ${c.badge}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function attachHomeHandlers(){
+  document.getElementById('open-settings').addEventListener('click', () => navigate('settings'));
+  document.querySelectorAll('.home-card').forEach(el => {
+    el.addEventListener('click', () => navigate(el.getAttribute('data-nav')));
+  });
+}
+
+/* ============ GENERIC CHECKLIST (Morning / Closing) ============ */
+function renderChecklistScreen(opts){
+  if(!formState.tasks){
+    formState.tasks = {};
+    opts.tasks.forEach(t => formState.tasks[t] = null);
+    formState.manager = "";
+  }
+  const done = Object.values(formState.tasks).filter(v=>v!==null).length;
+  const total = opts.tasks.length;
+  const pct = total ? Math.round((done/total)*100) : 0;
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header class="top">
+      <button class="icon-btn back" id="go-back" aria-label="Back">&#8592;</button>
+      <div class="eyebrow">Pahuna Kitchen</div>
+      <h1 class="headline">${opts.title}</h1>
+      <div class="sub mono">${todayStr()}</div>
+    </header>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <section class="card">
+      <label class="field-label">Manager on duty</label>
+      <select id="manager-select">
+        <option value="">Select your name</option>
+        ${config.managers.map(m=>`<option value="${m}" ${formState.manager===m?'selected':''}>${m}</option>`).join('')}
+      </select>
+      <div class="task-list">
+        ${opts.tasks.map((t,i) => `
+          <div class="task-row">
+            <div class="task-name"><span class="task-num">${String(i+1).padStart(2,'0')}</span>${t}</div>
+            <div class="toggle" data-task="${i}">
+              <button class="pos ${formState.tasks[t]==='Yes'?'active':''}" data-val="Yes">YES</button>
+              <button class="neg ${formState.tasks[t]==='No'?'active':''}" data-val="No">NO</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+    <div class="submit-bar">
+      <button class="submit-btn" id="submit-btn" ${(!formState.manager || done<total)?'disabled':''}>Submit checklist</button>
+      <div class="submit-hint" id="submit-hint">${done}/${total} tasks marked${!formState.manager?' &middot; select your name':''}</div>
+    </div>
+    ${stampOverlayHtml()}
+  `;
+
+  document.getElementById('go-back').addEventListener('click', () => navigate('home'));
+  document.getElementById('manager-select').addEventListener('change', e => { formState.manager = e.target.value; refreshChecklistSubmitState(opts); });
+  document.querySelectorAll('.toggle').forEach(toggle => {
+    toggle.addEventListener('click', e => {
+      const btn = e.target.closest('button'); if(!btn) return;
+      const idx = parseInt(toggle.getAttribute('data-task'));
+      const taskName = opts.tasks[idx];
+      formState.tasks[taskName] = btn.getAttribute('data-val');
+      toggle.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      refreshChecklistSubmitState(opts);
+    });
+  });
+  document.getElementById('submit-btn').addEventListener('click', () => submitChecklist(opts));
+  attachStampHandlers(() => navigate('home'));
+}
+
+function refreshChecklistSubmitState(opts){
+  const done = Object.values(formState.tasks).filter(v=>v!==null).length;
+  const total = opts.tasks.length;
+  const pct = total ? Math.round((done/total)*100) : 0;
+  const fill = document.querySelector('.progress-fill'); if(fill) fill.style.width = pct+'%';
+  const hint = document.getElementById('submit-hint');
+  if(hint) hint.innerHTML = `${done}/${total} tasks marked${!formState.manager?' &middot; select your name':''}`;
+  const btn = document.getElementById('submit-btn');
+  if(btn) btn.disabled = !(formState.manager && done===total);
+}
+
+async function submitChecklist(opts){
+  const btn = document.getElementById('submit-btn'); btn.disabled = true; btn.textContent = 'Submitting\u2026';
+  const submittedAt = nowStamp();
+  const payload = { formType:'checklist', sheetName: opts.sheetName, date: todayStr(), manager: formState.manager, tasks: formState.tasks, submittedAt };
+  await postToSheet(payload);
+  await logSubmission({ formType:'checklist', sheetName: opts.sheetName, manager: formState.manager, submittedAt });
+  showStamp(`${formState.manager} \u00b7 ${submittedAt}`);
+}
+
+/* ============ KITCHEN INVENTORY (AM/PM, Yes/No, chef+manager) ============ */
+function renderInventoryScreen(){
+  if(!formState.shift){
+    formState.shift = 'Morning';
+    formState.items = {};
+    config.inventoryItems.forEach(i => formState.items[i] = null);
+    formState.manager = ""; formState.chef = "";
+  }
+  const done = Object.values(formState.items).filter(v=>v!==null).length;
+  const total = config.inventoryItems.length;
+  const pct = total ? Math.round((done/total)*100) : 0;
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header class="top">
+      <button class="icon-btn back" id="go-back" aria-label="Back">&#8592;</button>
+      <div class="eyebrow">Pahuna Kitchen</div>
+      <h1 class="headline">Kitchen Inventory</h1>
+      <div class="sub mono">Prepared / cooked items \u00b7 ${todayStr()}</div>
+    </header>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <section class="card">
+      <label class="field-label">Shift</label>
+      <div class="chip-row">
+        <div class="chip ${formState.shift==='Morning'?'active':''}" data-shift="Morning">Morning (10:30 AM)</div>
+        <div class="chip ${formState.shift==='Evening'?'active':''}" data-shift="Evening">Evening</div>
+      </div>
+      <div class="field-gap">
+        <label class="field-label">Chef on duty</label>
+        <select id="chef-select">
+          <option value="">Select chef</option>
+          ${config.chefs.map(c=>`<option value="${c}" ${formState.chef===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field-gap">
+        <label class="field-label">Manager verifying</label>
+        <select id="manager-select">
+          <option value="">Select manager</option>
+          ${config.managers.map(m=>`<option value="${m}" ${formState.manager===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="task-list">
+        ${config.inventoryItems.map((t,i) => `
+          <div class="task-row">
+            <div class="task-name"><span class="task-num">${String(i+1).padStart(2,'0')}</span>${t}</div>
+            <div class="toggle" data-item="${i}">
+              <button class="pos ${formState.items[t]==='Yes'?'active':''}" data-val="Yes">YES</button>
+              <button class="neg ${formState.items[t]==='No'?'active':''}" data-val="No">NO</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+    <div class="submit-bar">
+      <button class="submit-btn" id="submit-btn" ${(!formState.manager || !formState.chef || done<total)?'disabled':''}>Submit inventory check</button>
+      <div class="submit-hint" id="submit-hint">${done}/${total} items marked</div>
+    </div>
+    ${stampOverlayHtml()}
+  `;
+
+  document.getElementById('go-back').addEventListener('click', () => navigate('home'));
+  document.querySelectorAll('.chip[data-shift]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      formState.shift = chip.getAttribute('data-shift');
+      document.querySelectorAll('.chip[data-shift]').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+  document.getElementById('chef-select').addEventListener('change', e => { formState.chef = e.target.value; refreshInventorySubmitState(); });
+  document.getElementById('manager-select').addEventListener('change', e => { formState.manager = e.target.value; refreshInventorySubmitState(); });
+  document.querySelectorAll('.toggle[data-item]').forEach(toggle => {
+    toggle.addEventListener('click', e => {
+      const btn = e.target.closest('button'); if(!btn) return;
+      const idx = parseInt(toggle.getAttribute('data-item'));
+      const itemName = config.inventoryItems[idx];
+      formState.items[itemName] = btn.getAttribute('data-val');
+      toggle.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      refreshInventorySubmitState();
+    });
+  });
+  document.getElementById('submit-btn').addEventListener('click', submitInventory);
+  attachStampHandlers(() => navigate('home'));
+}
+
+function refreshInventorySubmitState(){
+  const done = Object.values(formState.items).filter(v=>v!==null).length;
+  const total = config.inventoryItems.length;
+  const pct = total ? Math.round((done/total)*100) : 0;
+  const fill = document.querySelector('.progress-fill'); if(fill) fill.style.width = pct+'%';
+  const hint = document.getElementById('submit-hint');
+  if(hint) hint.textContent = `${done}/${total} items marked`;
+  const btn = document.getElementById('submit-btn');
+  if(btn) btn.disabled = !(formState.manager && formState.chef && done===total);
+}
+
+async function submitInventory(){
+  const btn = document.getElementById('submit-btn'); btn.disabled = true; btn.textContent = 'Submitting\u2026';
+  const submittedAt = nowStamp();
+  const payload = { formType:'checklist', sheetName:'Kitchen Inventory', date: todayStr(), shift: formState.shift, chef: formState.chef, manager: formState.manager, tasks: formState.items, submittedAt };
+  await postToSheet(payload);
+  await logSubmission({ formType:'checklist', sheetName:'Kitchen Inventory', shift: formState.shift, manager: formState.manager, submittedAt });
+  showStamp(`${formState.shift} shift \u00b7 ${formState.manager}`);
+}
+
+/* ============ WASTAGE TRACKER ============ */
+const WASTAGE_CHECKPOINTS = [
+  {id:'opening', label:'10 AM \u2014 Opening'},
+  {id:'add2pm', label:'2 PM \u2014 Added'},
+  {id:'add4pm', label:'4 PM \u2014 Added'},
+  {id:'closing', label:'Closing \u2014 End of day'}
+];
+
+function renderWastageScreen(){
+  if(!formState.checkpoint){
+    formState.checkpoint = 'opening';
+    formState.manager = "";
+    formState.values = {};
+    config.wastageItems.forEach(it => formState.values[it.name] = {qty:'', canUse:null, reason:''});
+  }
+  const isClosing = formState.checkpoint === 'closing';
+  const filledCount = Object.values(formState.values).filter(v => v.qty !== '').length;
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header class="top">
+      <button class="icon-btn back" id="go-back" aria-label="Back">&#8592;</button>
+      <div class="eyebrow">Pahuna Kitchen</div>
+      <h1 class="headline">Wastage Tracker</h1>
+      <div class="sub mono">${todayStr()}</div>
+    </header>
+    <section class="card">
+      <label class="field-label">Checkpoint</label>
+      <div class="chip-row">
+        ${WASTAGE_CHECKPOINTS.map(c => `<div class="chip ${formState.checkpoint===c.id?'active':''}" data-checkpoint="${c.id}">${c.label}</div>`).join('')}
+      </div>
+      <div class="field-gap">
+        <label class="field-label">Manager</label>
+        <select id="manager-select">
+          <option value="">Select your name</option>
+          ${config.managers.map(m=>`<option value="${m}" ${formState.manager===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="task-list" id="item-list">
+        ${config.wastageItems.map((it,i) => `
+          <div class="item-input-row">
+            <div class="item-name">${it.name} <span class="item-unit">(${it.unit})</span></div>
+            <input type="number" min="0" step="0.01" class="num-input" data-item="${i}" placeholder="0" value="${formState.values[it.name].qty}">
+          </div>
+          ${isClosing ? `
+          <div class="item-input-row" style="border-bottom:1px solid var(--line);padding-top:0;">
+            <div class="item-name" style="font-size:12px;color:var(--ink-soft);">Can use next day?</div>
+            <div class="toggle" data-canuse="${i}">
+              <button class="pos ${formState.values[it.name].canUse==='Y'?'active':''}" data-val="Y">Y</button>
+              <button class="neg ${formState.values[it.name].canUse==='N'?'active':''}" data-val="N">N</button>
+            </div>
+          </div>
+          <div class="item-input-row" style="border-bottom:1px solid var(--line);padding-top:0;padding-bottom:14px;">
+            <div class="item-name" style="font-size:12px;color:var(--ink-soft);">Wastage reason (if any)</div>
+            <select class="reason-select" data-reason="${i}" style="width:150px;font-size:12.5px;padding:8px;">
+              <option value="">\u2014</option>
+              ${config.wastageReasons.map(r=>`<option value="${r.code}" ${formState.values[it.name].reason===r.code?'selected':''}>${r.code} \u2014 ${r.label}</option>`).join('')}
+            </select>
+          </div>` : ''}
+        `).join('')}
+      </div>
+    </section>
+    <div class="submit-bar">
+      <button class="submit-btn" id="submit-btn" ${(!formState.manager)?'disabled':''}>Submit ${WASTAGE_CHECKPOINTS.find(c=>c.id===formState.checkpoint).label} entry</button>
+      <div class="submit-hint">${filledCount}/${config.wastageItems.length} items entered \u00b7 blank = no change</div>
+    </div>
+    ${stampOverlayHtml()}
+  `;
+
+  document.getElementById('go-back').addEventListener('click', () => navigate('home'));
+  document.querySelectorAll('.chip[data-checkpoint]').forEach(chip => {
+    chip.addEventListener('click', () => { formState.checkpoint = chip.getAttribute('data-checkpoint'); renderWastageScreen(); });
+  });
+  document.getElementById('manager-select').addEventListener('change', e => {
+    formState.manager = e.target.value;
+    document.getElementById('submit-btn').disabled = !formState.manager;
+  });
+  document.querySelectorAll('input[data-item]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = parseInt(e.target.getAttribute('data-item'));
+      formState.values[config.wastageItems[idx].name].qty = e.target.value;
+    });
+  });
+  document.querySelectorAll('.toggle[data-canuse]').forEach(toggle => {
+    toggle.addEventListener('click', e => {
+      const btn = e.target.closest('button'); if(!btn) return;
+      const idx = parseInt(toggle.getAttribute('data-canuse'));
+      formState.values[config.wastageItems[idx].name].canUse = btn.getAttribute('data-val');
+      toggle.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  document.querySelectorAll('select[data-reason]').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const idx = parseInt(e.target.getAttribute('data-reason'));
+      formState.values[config.wastageItems[idx].name].reason = e.target.value;
+    });
+  });
+  document.getElementById('submit-btn').addEventListener('click', submitWastage);
+  attachStampHandlers(() => navigate('home'));
+}
+
+async function submitWastage(){
+  const btn = document.getElementById('submit-btn'); btn.disabled = true; btn.textContent = 'Submitting\u2026';
+  const submittedAt = nowStamp();
+  const isClosing = formState.checkpoint === 'closing';
+  const items = config.wastageItems
+    .filter(it => formState.values[it.name].qty !== '')
+    .map(it => {
+      const v = formState.values[it.name];
+      const entry = { name: it.name, unit: it.unit };
+      if(formState.checkpoint === 'opening') entry.opening = v.qty;
+      if(formState.checkpoint === 'add2pm') entry.added2pm = v.qty;
+      if(formState.checkpoint === 'add4pm') entry.added4pm = v.qty;
+      if(isClosing){ entry.closing = v.qty; if(v.canUse) entry.canUseNextDay = v.canUse; if(v.reason) entry.wastageReason = v.reason; }
+      return entry;
+    });
+  const payload = { formType:'wastage', date: todayStr(), checkpoint: formState.checkpoint, manager: formState.manager, items, submittedAt };
+  await postToSheet(payload);
+  await logSubmission({ formType:'wastage', checkpoint: formState.checkpoint, manager: formState.manager, submittedAt });
+  showStamp(`${WASTAGE_CHECKPOINTS.find(c=>c.id===formState.checkpoint).label} \u00b7 ${formState.manager}`);
+}
+
+/* ============ POULTRY TRACKER ============ */
+function renderPoultryScreen(){
+  if(formState.muttonInwardKg === undefined){
+    formState.manager = ""; formState.muttonInwardKg=''; formState.muttonInwardPieces=''; formState.muttonBalanceKg='';
+    formState.chickenInwardKg=''; formState.chickenInwardPieces=''; formState.chickenBalanceKg=''; formState.chickenBalancePieces='';
+  }
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header class="top">
+      <button class="icon-btn back" id="go-back" aria-label="Back">&#8592;</button>
+      <div class="eyebrow">Pahuna Kitchen</div>
+      <h1 class="headline">Poultry Tracker</h1>
+      <div class="sub mono">${todayStr()}</div>
+    </header>
+    <section class="card">
+      <label class="field-label">Manager</label>
+      <select id="manager-select">
+        <option value="">Select your name</option>
+        ${config.managers.map(m=>`<option value="${m}" ${formState.manager===m?'selected':''}>${m}</option>`).join('')}
+      </select>
+
+      <label class="field-label field-gap">Mutton Inward (Kg)</label>
+      <input type="number" min="0" step="0.01" id="f-muttonInwardKg" value="${formState.muttonInwardKg}">
+      <label class="field-label field-gap">Mutton Inward (Pieces)</label>
+      <input type="number" min="0" step="1" id="f-muttonInwardPieces" value="${formState.muttonInwardPieces}">
+      <label class="field-label field-gap">Mutton Balance (Kg)</label>
+      <input type="number" min="0" step="0.01" id="f-muttonBalanceKg" value="${formState.muttonBalanceKg}">
+
+      <label class="field-label field-gap">Chicken Inward (Kg)</label>
+      <input type="number" min="0" step="0.01" id="f-chickenInwardKg" value="${formState.chickenInwardKg}">
+      <label class="field-label field-gap">Chicken Inward (Pieces)</label>
+      <input type="number" min="0" step="1" id="f-chickenInwardPieces" value="${formState.chickenInwardPieces}">
+      <label class="field-label field-gap">Chicken Balance (Kg)</label>
+      <input type="number" min="0" step="0.01" id="f-chickenBalanceKg" value="${formState.chickenBalanceKg}">
+      <label class="field-label field-gap">Chicken Balance (Pieces)</label>
+      <input type="number" min="0" step="1" id="f-chickenBalancePieces" value="${formState.chickenBalancePieces}">
+    </section>
+    <div class="submit-bar">
+      <button class="submit-btn" id="submit-btn" ${!formState.manager?'disabled':''}>Submit today's entry</button>
+      <div class="submit-hint">${!formState.manager?'Select your name to submit':'Blank fields are left unchanged'}</div>
+    </div>
+    ${stampOverlayHtml()}
+  `;
+  document.getElementById('go-back').addEventListener('click', () => navigate('home'));
+  document.getElementById('manager-select').addEventListener('change', e => { formState.manager = e.target.value; document.getElementById('submit-btn').disabled = !formState.manager; });
+  ['muttonInwardKg','muttonInwardPieces','muttonBalanceKg','chickenInwardKg','chickenInwardPieces','chickenBalanceKg','chickenBalancePieces'].forEach(f => {
+    document.getElementById('f-'+f).addEventListener('input', e => { formState[f] = e.target.value; });
+  });
+  document.getElementById('submit-btn').addEventListener('click', submitPoultry);
+  attachStampHandlers(() => navigate('home'));
+}
+
+async function submitPoultry(){
+  const btn = document.getElementById('submit-btn'); btn.disabled = true; btn.textContent = 'Submitting\u2026';
+  const submittedAt = nowStamp();
+  const payload = {
+    formType:'poultry', date: todayStr(), manager: formState.manager, submittedAt,
+    muttonInwardKg: formState.muttonInwardKg, muttonInwardPieces: formState.muttonInwardPieces, muttonBalanceKg: formState.muttonBalanceKg,
+    chickenInwardKg: formState.chickenInwardKg, chickenInwardPieces: formState.chickenInwardPieces,
+    chickenBalanceKg: formState.chickenBalanceKg, chickenBalancePieces: formState.chickenBalancePieces
+  };
+  await postToSheet(payload);
+  await logSubmission({ formType:'poultry', manager: formState.manager, submittedAt });
+  showStamp(`${formState.manager} \u00b7 ${submittedAt}`);
+}
+
+/* ============ QUALITY TASTING LOG ============ */
+function renderQualityScreen(){
+  if(formState.result === undefined){ formState.manager=""; formState.item=""; formState.result=null; formState.comment=""; }
+  const qEntries = todayLog.filter(e=>e.formType==='quality').sort((a,b)=> (b.submittedAtRaw||0)-(a.submittedAtRaw||0));
+  const fails = qEntries.filter(e=>e.result==='Fail').length;
+  const pct = Math.min(100, Math.round((qEntries.length/20)*100));
+  const canSubmit = formState.manager && formState.item.trim() && formState.result && (formState.result==='Pass' || formState.comment.trim());
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header class="top">
+      <button class="icon-btn back" id="go-back" aria-label="Back">&#8592;</button>
+      <div class="eyebrow">Pahuna Kitchen</div>
+      <h1 class="headline">Quality Tasting</h1>
+      <div class="sub mono">${qEntries.length}/20 today${fails?` \u00b7 ${fails} fail`:''}</div>
+    </header>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <section class="card">
+      <label class="field-label">Manager</label>
+      <select id="manager-select">
+        <option value="">Select your name</option>
+        ${config.managers.map(m=>`<option value="${m}" ${formState.manager===m?'selected':''}>${m}</option>`).join('')}
+      </select>
+
+      <label class="field-label field-gap">Item audited</label>
+      <input type="text" id="item-input" list="menu-items" placeholder="Type or pick an item" value="${escapeHtml(formState.item)}">
+      <datalist id="menu-items">
+        ${config.qualityMenuItems.map(m=>`<option value="${escapeHtml(m)}">`).join('')}
+      </datalist>
+
+      <label class="field-label field-gap">Result</label>
+      <div class="toggle" id="result-toggle" style="width:100%;">
+        <button class="pos ${formState.result==='Pass'?'active':''}" data-val="Pass" style="flex:1;">PASS</button>
+        <button class="neg ${formState.result==='Fail'?'active':''}" data-val="Fail" style="flex:1;">FAIL</button>
+      </div>
+
+      ${formState.result==='Fail' ? `
+      <label class="field-label field-gap">What went wrong (required)</label>
+      <textarea id="comment-input" placeholder="e.g. under-seasoned, served cold, wrong portion">${escapeHtml(formState.comment)}</textarea>
+      ` : ''}
+    </section>
+
+    <section class="card">
+      <label class="field-label">Today's audits</label>
+      <div class="today-log">
+        ${qEntries.length ? qEntries.map(e => `
+          <div class="log-entry ${e.result==='Fail'?'fail':''}">
+            <span><b>${escapeHtml(e.item)}</b> \u2014 ${e.result}${e.comment?': '+escapeHtml(e.comment):''}</span>
+            <span>${e.time||''}</span>
+          </div>
+        `).join('') : '<div class="log-entry" style="justify-content:center;">No audits logged yet today</div>'}
+      </div>
+    </section>
+
+    <div class="submit-bar">
+      <button class="submit-btn" id="submit-btn" ${canSubmit?'':'disabled'}>Log audit</button>
+      <div class="submit-hint">${qEntries.length}/20 done today</div>
+    </div>
+    ${stampOverlayHtml()}
+  `;
+
+  document.getElementById('go-back').addEventListener('click', () => navigate('home'));
+  document.getElementById('manager-select').addEventListener('change', e => { formState.manager = e.target.value; refreshQualitySubmitState(); });
+  document.getElementById('item-input').addEventListener('input', e => { formState.item = e.target.value; refreshQualitySubmitState(); });
+  document.querySelectorAll('#result-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      formState.result = btn.getAttribute('data-val');
+      renderQualityScreen();
+    });
+  });
+  const commentEl = document.getElementById('comment-input');
+  if(commentEl) commentEl.addEventListener('input', e => { formState.comment = e.target.value; refreshQualitySubmitState(); });
+  document.getElementById('submit-btn').addEventListener('click', submitQuality);
+  attachStampHandlers(null);
+}
+
+function refreshQualitySubmitState(){
+  const canSubmit = formState.manager && formState.item.trim() && formState.result && (formState.result==='Pass' || (formState.comment||'').trim());
+  const btn = document.getElementById('submit-btn');
+  if(btn) btn.disabled = !canSubmit;
+}
+
+async function submitQuality(){
+  const btn = document.getElementById('submit-btn'); btn.disabled = true; btn.textContent = 'Logging\u2026';
+  const submittedAt = nowStamp();
+  const payload = { formType:'quality', date: todayStr(), time: timeOnly(), manager: formState.manager, item: formState.item.trim(), result: formState.result, comment: formState.comment||'' };
+  await postToSheet(payload);
+  await logSubmission({ formType:'quality', manager: formState.manager, item: formState.item.trim(), result: formState.result, comment: formState.comment||'', submittedAtRaw: Date.now() });
+  await loadTodayLog();
+  formState = {};
+  showStamp(`${formState.item||''}`, true);
+}
+
+/* ============ STAMP OVERLAY (shared) ============ */
+function stampOverlayHtml(){
+  return `
+    <div class="stamp-overlay" id="stamp-overlay">
+      <div class="stamp-card">
+        <div class="stamp-mark">Logged</div>
+        <h2>Submitted</h2>
+        <p id="stamp-detail"></p>
+        <button class="stamp-close" id="stamp-close">Done</button>
+      </div>
+    </div>
+  `;
+}
+function showStamp(detail){
+  document.getElementById('stamp-detail').textContent = detail;
+  document.getElementById('stamp-overlay').classList.add('show');
+}
+let stampCallback = null;
+function attachStampHandlers(onClose){
+  stampCallback = onClose;
+  const closeBtn = document.getElementById('stamp-close');
+  if(closeBtn) closeBtn.addEventListener('click', async () => {
+    document.getElementById('stamp-overlay').classList.remove('show');
+    await loadTodayLog();
+    if(stampCallback) stampCallback(); else { formState = {}; render(); }
+  });
+}
+
+/* ============ SETTINGS / SETUP ============ */
+function renderSetup(firstRun){
+  return `
+    <header class="top">
+      <div class="eyebrow">Kitchen Ops</div>
+      <h1 class="headline">${firstRun ? 'One-time setup' : 'Settings'}</h1>
+      <div class="sub mono">Connect this app to your Google Sheet</div>
+    </header>
+    <div class="setup-screen">
+      ${firstRun ? '<p>Paste the Apps Script Web App URL from your Google Sheet. This only needs to be done once \u2014 it\'s shared with every manager who opens this app.</p>' : ''}
+      <label class="field-label">Web App URL</label>
+      <input type="text" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec" value="${config.webAppUrl || ''}">
+
+      <label class="field-label">Managers (one per line)</label>
+      <textarea id="cfg-managers">${config.managers.join('\n')}</textarea>
+
+      <label class="field-label">Chefs (one per line)</label>
+      <textarea id="cfg-chefs">${config.chefs.join('\n')}</textarea>
+
+      <label class="field-label">Morning Checklist tasks (one per line)</label>
+      <textarea id="cfg-morning" style="min-height:130px;">${config.morningTasks.join('\n')}</textarea>
+
+      <label class="field-label">Closing Checklist tasks (one per line)</label>
+      <textarea id="cfg-closing" style="min-height:160px;">${config.closingTasks.join('\n')}</textarea>
+
+      <label class="field-label">Kitchen Inventory items (one per line)</label>
+      <textarea id="cfg-inventory" style="min-height:200px;">${config.inventoryItems.join('\n')}</textarea>
+
+      <label class="field-label">Quality Tasting menu list (one per line, for autocomplete)</label>
+      <textarea id="cfg-quality" style="min-height:160px;">${config.qualityMenuItems.join('\n')}</textarea>
+
+      <button class="save-btn" id="cfg-save">Save settings</button>
+      <div id="cfg-status" class="status-msg"></div>
+      ${!firstRun ? '<div class="link-row"><button id="cfg-back">&larr; Back to Kitchen Ops</button></div>' : ''}
+    </div>
+  `;
+}
+
+function attachSetupHandlers(){
+  document.getElementById('cfg-save').addEventListener('click', async () => {
+    const url = document.getElementById('cfg-url').value.trim();
+    const managers = document.getElementById('cfg-managers').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const chefs = document.getElementById('cfg-chefs').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const morningTasks = document.getElementById('cfg-morning').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const closingTasks = document.getElementById('cfg-closing').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const inventoryItems = document.getElementById('cfg-inventory').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const qualityMenuItems = document.getElementById('cfg-quality').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const statusEl = document.getElementById('cfg-status');
+    if(!url){ statusEl.textContent = 'Add the Web App URL.'; statusEl.className = 'status-msg err'; return; }
+
+    config = {
+      webAppUrl: url,
+      managers: managers.length?managers:DEFAULT_CONFIG.managers,
+      chefs: chefs.length?chefs:DEFAULT_CONFIG.chefs,
+      morningTasks: morningTasks.length?morningTasks:DEFAULT_CONFIG.morningTasks,
+      closingTasks: closingTasks.length?closingTasks:DEFAULT_CONFIG.closingTasks,
+      inventoryItems: inventoryItems.length?inventoryItems:DEFAULT_CONFIG.inventoryItems,
+      wastageItems: DEFAULT_CONFIG.wastageItems,
+      wastageReasons: DEFAULT_CONFIG.wastageReasons,
+      qualityMenuItems: qualityMenuItems.length?qualityMenuItems:DEFAULT_CONFIG.qualityMenuItems
+    };
+    const ok = await storageSet('config', config, true);
+    statusEl.textContent = ok ? 'Saved.' : 'Saved locally for this session (storage unavailable).';
+    statusEl.className = 'status-msg ok';
+    setTimeout(() => { screen = 'home'; render(); }, 500);
+  });
+  const back = document.getElementById('cfg-back');
+  if(back) back.addEventListener('click', () => { screen='home'; render(); });
+}
+
+/* ============ INIT ============ */
+(async function init(){
+  await loadConfig();
+  await loadTodayLog();
+  render();
+})();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
