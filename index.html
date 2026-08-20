@@ -179,6 +179,20 @@ const DEFAULT_CONFIG = {
     {code:"QC", label:"Quality Issue"}, {code:"EX", label:"Expired Shelf Life"}, {code:"DM", label:"Damaged During Handling"},
     {code:"WR", label:"Wrong Recipe/Batch"}, {code:"OC", label:"Over Cooked"}, {code:"BR", label:"Burnt"}, {code:"OT", label:"Other"}
   ],
+  stockItems: [
+    "Wheat Flour","Rice Flour","Rice for Meal","Rice for Staff","Cumin Whole","Black Cardamom",
+    "Green Cardamom Powder","Bay Leaf","Cinnamon","Clove","Ajwain","Nigella Seeds","Black Peppercorns",
+    "Dry Red Chilli","Coriander Whole","Toor Dal","Masoor Dal","Flax Seeds","Fennel Seeds (Saunf)",
+    "Black Mustard Seeds","Peanuts","Jaggery","Tamarind","Tea Powder","Red Chilli Powder",
+    "Coriander Powder","Turmeric Powder","Salt","Besan","Maida","Ghee","Sunflower Oil","Dry Coconut",
+    "Kaju Broken","Kismis","Tape 2\"","Tape 1\"","Tea Flask","Butter Paper","Aluminium Foil",
+    "Black gram/ Black Chana","Dishwasher Gel","Poha","Kitchen Roll","Chana Dal","Chat Masala",
+    "Javitri","Jayfal","Black Salt","Mustard Oil","Sugar","Onion","Tomato","Cauliflower","Lady Finger",
+    "Brinjal","Ginger","Garlic","Peeled Garlic","Coriander Leaf","Lemon","Green Chilli","Ridge Gourd",
+    "Curry Leaf","Tissue","Clean Wrap","Silver Foil","Chai Tube","Wooden Spoon","Cellotape Big",
+    "Cellotape Small","Aluminum Tin Container (Rice) 250 ml","Aluminum Tin Container (Rice) 500 ml",
+    "Curd","Milky Mist Khoya","Egg","Toned Milk","Paneer"
+  ],
   qualityMenuItems: [
     "Bihari Chicken Curry","Bihari Fish Curry (Sarso Wali)","Champaran Mutton Curry","Chicken Roti Combo",
     "Litti Chokha","Pahuna Dal Bhaat Chokha Thali","2 Sattu Parathas With Champaran Mutton Curry",
@@ -207,7 +221,7 @@ const DEFAULT_CONFIG = {
 };
 
 let config = null;
-let screen = 'home';
+let currentScreen = 'home';
 let todayLog = [];
 let formState = {};
 
@@ -218,35 +232,34 @@ function nowStamp(){ return new Date().toLocaleString('en-GB', {hour:'2-digit',m
 function timeOnly(){ return new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-async function storageGet(key, shared){
-  try{ const r = await window.storage.get(key, shared); return r ? JSON.parse(r.value) : null; }catch(e){ return null; }
+/* Real browser localStorage — persists across app opens on this device.
+   (This app runs as a standalone hosted site, not inside a Claude.ai preview,
+   so it uses the browser's own storage rather than any Claude-specific API.) */
+function storageGet(key){
+  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }catch(e){ return null; }
 }
-async function storageSet(key, value, shared){
-  try{ await window.storage.set(key, JSON.stringify(value), shared); return true; }catch(e){ return false; }
+function storageSet(key, value){
+  try{ localStorage.setItem(key, JSON.stringify(value)); return true; }catch(e){ return false; }
 }
 
 async function loadConfig(){
-  const saved = await storageGet('config', true);
-  config = saved || JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  const saved = storageGet('config');
+  // Merge saved config over defaults so newly-added fields (like stockItems)
+  // still show up even for devices that saved a config before this update.
+  config = saved ? Object.assign({}, DEFAULT_CONFIG, saved) : JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 }
 
 async function logSubmission(entry){
   entry.date = todayKey();
   entry.time = timeOnly();
-  await storageSet(`log:${todayKey()}:${Date.now()}`, entry, true);
+  const key = `log:${todayKey()}`;
+  const day = storageGet(key) || [];
+  day.push(entry);
+  storageSet(key, day);
 }
 
 async function loadTodayLog(){
-  todayLog = [];
-  try{
-    const listRes = await window.storage.list(`log:${todayKey()}:`, true);
-    if(listRes && listRes.keys){
-      for(const k of listRes.keys){
-        const v = await storageGet(k, true);
-        if(v) todayLog.push(v);
-      }
-    }
-  }catch(e){}
+  todayLog = storageGet(`log:${todayKey()}`) || [];
 }
 
 async function postToSheet(payload){
@@ -260,21 +273,22 @@ async function postToSheet(payload){
   }catch(e){}
 }
 
-function navigate(s){ screen = s; formState = {}; render(); window.scrollTo(0,0); }
+function navigate(s){ currentScreen = s; formState = {}; render(); window.scrollTo(0,0); }
 
 /* ============ RENDER ROOT ============ */
 function render(){
   const app = document.getElementById('app');
   if(!config.webAppUrl){ app.innerHTML = renderSetup(true); attachSetupHandlers(); return; }
 
-  if(screen === 'home') { app.innerHTML = renderHome(); attachHomeHandlers(); }
-  else if(screen === 'settings') { app.innerHTML = renderSetup(false); attachSetupHandlers(); }
-  else if(screen === 'morning') renderChecklistScreen({sheetName:'Morning Checklist', title:'Morning Checklist', tasks: config.morningTasks});
-  else if(screen === 'closing') renderChecklistScreen({sheetName:'Closing Checklist', title:'Closing Checklist', tasks: config.closingTasks});
-  else if(screen === 'inventory') renderInventoryScreen();
-  else if(screen === 'wastage') renderWastageScreen();
-  else if(screen === 'poultry') renderPoultryScreen();
-  else if(screen === 'quality') renderQualityScreen();
+  if(currentScreen === 'home') { app.innerHTML = renderHome(); attachHomeHandlers(); }
+  else if(currentScreen === 'settings') { app.innerHTML = renderSetup(false); attachSetupHandlers(); }
+  else if(currentScreen === 'morning') renderChecklistScreen({sheetName:'Morning Checklist', title:'Morning Checklist', tasks: config.morningTasks});
+  else if(currentScreen === 'closing') renderChecklistScreen({sheetName:'Closing Checklist', title:'Closing Checklist', tasks: config.closingTasks});
+  else if(currentScreen === 'inventory') renderInventoryScreen();
+  else if(currentScreen === 'wastage') renderWastageScreen();
+  else if(currentScreen === 'stock') renderStockScreen();
+  else if(currentScreen === 'poultry') renderPoultryScreen();
+  else if(currentScreen === 'quality') renderQualityScreen();
 }
 
 /* ============ HOME ============ */
@@ -287,6 +301,7 @@ function renderHome(){
   const invAM = has(e => e.formType==='checklist' && e.sheetName==='Kitchen Inventory' && e.shift==='Morning');
   const invPM = has(e => e.formType==='checklist' && e.sheetName==='Kitchen Inventory' && e.shift==='Evening');
   const wastageCheckpoints = new Set(todayLog.filter(e=>e.formType==='wastage').map(e=>e.checkpoint)).size;
+  const stockCheckpoints = new Set(todayLog.filter(e=>e.formType==='stock').map(e=>e.checkpoint)).size;
   const poultryDone = has(e => e.formType==='poultry');
   const qualityEntries = todayLog.filter(e=>e.formType==='quality');
   const qualityFails = qualityEntries.filter(e=>e.result==='Fail').length;
@@ -296,6 +311,7 @@ function renderHome(){
     {id:'closing', title:'Closing Checklist', sub:'End of day shutdown', badge: closingDone ? statusBadge('Done','done') : statusBadge('Pending','pending')},
     {id:'inventory', title:'Kitchen Inventory', sub:'Cooked items \u2014 AM & PM', badge: (invAM&&invPM) ? statusBadge('Done','done') : (invAM||invPM) ? statusBadge('AM or PM left','partial') : statusBadge('Pending','pending')},
     {id:'wastage', title:'Wastage Tracker', sub:'Opening \u00b7 2 checkpoints \u00b7 Closing', badge: wastageCheckpoints>=4 ? statusBadge('Done','done') : wastageCheckpoints>0 ? statusBadge(wastageCheckpoints+'/4 logged','partial') : statusBadge('Pending','pending')},
+    {id:'stock', title:'Daily Stock', sub:'Start & end of day \u2014 raw materials', badge: stockCheckpoints>=2 ? statusBadge('Done','done') : stockCheckpoints>0 ? statusBadge('1/2 logged','partial') : statusBadge('Pending','pending')},
     {id:'poultry', title:'Poultry Tracker', sub:'Daily inward & balance', badge: poultryDone ? statusBadge('Done','done') : statusBadge('Pending','pending')},
     {id:'quality', title:'Quality Tasting', sub:'20 audits \u00b7 pass/fail', badge: qualityEntries.length>=20 ? statusBadge('20/20','done') : statusBadge(qualityEntries.length+'/20'+(qualityFails?' \u00b7 '+qualityFails+' fail':''), qualityFails?'partial':'pending')}
   ];
@@ -638,6 +654,93 @@ async function submitWastage(){
   showStamp(`${WASTAGE_CHECKPOINTS.find(c=>c.id===formState.checkpoint).label} \u00b7 ${formState.manager}`);
 }
 
+/* ============ START/END OF DAY STOCK ============ */
+const STOCK_CHECKPOINTS = [
+  {id:'start', label:'Start of Day'},
+  {id:'end', label:'End of Day'}
+];
+
+function renderStockScreen(){
+  if(!formState.checkpoint){
+    formState.checkpoint = 'start';
+    formState.manager = "";
+    formState.values = {};
+    config.stockItems.forEach(name => formState.values[name] = '');
+  }
+  const filledCount = Object.values(formState.values).filter(v => v !== '').length;
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header class="top">
+      <button class="icon-btn back" id="go-back" aria-label="Back">&#8592;</button>
+      <div class="eyebrow">Pahuna Kitchen</div>
+      <h1 class="headline">Daily Stock</h1>
+      <div class="sub mono">Start / end of day \u00b7 ${todayStr()}</div>
+    </header>
+    <section class="card">
+      <label class="field-label">Checkpoint</label>
+      <div class="chip-row">
+        ${STOCK_CHECKPOINTS.map(c => `<div class="chip ${formState.checkpoint===c.id?'active':''}" data-checkpoint="${c.id}">${c.label}</div>`).join('')}
+      </div>
+      <div class="field-gap">
+        <label class="field-label">Manager</label>
+        <select id="manager-select">
+          <option value="">Select your name</option>
+          ${config.managers.map(m=>`<option value="${m}" ${formState.manager===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="task-list">
+        ${config.stockItems.map((name,i) => `
+          <div class="item-input-row">
+            <div class="item-name">${name}</div>
+            <input type="number" min="0" step="0.01" class="num-input" data-item="${i}" placeholder="0" value="${formState.values[name]}">
+          </div>
+        `).join('')}
+      </div>
+    </section>
+    <div class="submit-bar">
+      <button class="submit-btn" id="submit-btn" ${(!formState.manager)?'disabled':''}>Submit ${STOCK_CHECKPOINTS.find(c=>c.id===formState.checkpoint).label} count</button>
+      <div class="submit-hint">${filledCount}/${config.stockItems.length} items entered \u00b7 blank = no change</div>
+    </div>
+    ${stampOverlayHtml()}
+  `;
+
+  document.getElementById('go-back').addEventListener('click', () => navigate('home'));
+  document.querySelectorAll('.chip[data-checkpoint]').forEach(chip => {
+    chip.addEventListener('click', () => { formState.checkpoint = chip.getAttribute('data-checkpoint'); renderStockScreen(); });
+  });
+  document.getElementById('manager-select').addEventListener('change', e => {
+    formState.manager = e.target.value;
+    document.getElementById('submit-btn').disabled = !formState.manager;
+  });
+  document.querySelectorAll('input[data-item]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = parseInt(e.target.getAttribute('data-item'));
+      formState.values[config.stockItems[idx]] = e.target.value;
+    });
+  });
+  document.getElementById('submit-btn').addEventListener('click', submitStock);
+  attachStampHandlers(() => navigate('home'));
+}
+
+async function submitStock(){
+  const btn = document.getElementById('submit-btn'); btn.disabled = true; btn.textContent = 'Submitting\u2026';
+  const submittedAt = nowStamp();
+  const isStart = formState.checkpoint === 'start';
+  const items = config.stockItems
+    .filter(name => formState.values[name] !== '')
+    .map(name => {
+      const entry = { name };
+      if(isStart) entry.startStock = formState.values[name];
+      else entry.endStock = formState.values[name];
+      return entry;
+    });
+  const payload = { formType:'stock', date: todayStr(), checkpoint: formState.checkpoint, manager: formState.manager, items, submittedAt };
+  await postToSheet(payload);
+  await logSubmission({ formType:'stock', checkpoint: formState.checkpoint, manager: formState.manager, submittedAt });
+  showStamp(`${STOCK_CHECKPOINTS.find(c=>c.id===formState.checkpoint).label} \u00b7 ${formState.manager}`);
+}
+
 /* ============ POULTRY TRACKER ============ */
 function renderPoultryScreen(){
   if(formState.muttonInwardKg === undefined){
@@ -853,6 +956,9 @@ function renderSetup(firstRun){
       <label class="field-label">Kitchen Inventory items (one per line)</label>
       <textarea id="cfg-inventory" style="min-height:200px;">${config.inventoryItems.join('\n')}</textarea>
 
+      <label class="field-label">Daily Stock items \u2014 start/end of day (one per line)</label>
+      <textarea id="cfg-stock" style="min-height:200px;">${config.stockItems.join('\n')}</textarea>
+
       <label class="field-label">Quality Tasting menu list (one per line, for autocomplete)</label>
       <textarea id="cfg-quality" style="min-height:160px;">${config.qualityMenuItems.join('\n')}</textarea>
 
@@ -871,6 +977,7 @@ function attachSetupHandlers(){
     const morningTasks = document.getElementById('cfg-morning').value.split('\n').map(s=>s.trim()).filter(Boolean);
     const closingTasks = document.getElementById('cfg-closing').value.split('\n').map(s=>s.trim()).filter(Boolean);
     const inventoryItems = document.getElementById('cfg-inventory').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const stockItems = document.getElementById('cfg-stock').value.split('\n').map(s=>s.trim()).filter(Boolean);
     const qualityMenuItems = document.getElementById('cfg-quality').value.split('\n').map(s=>s.trim()).filter(Boolean);
     const statusEl = document.getElementById('cfg-status');
     if(!url){ statusEl.textContent = 'Add the Web App URL.'; statusEl.className = 'status-msg err'; return; }
@@ -882,17 +989,18 @@ function attachSetupHandlers(){
       morningTasks: morningTasks.length?morningTasks:DEFAULT_CONFIG.morningTasks,
       closingTasks: closingTasks.length?closingTasks:DEFAULT_CONFIG.closingTasks,
       inventoryItems: inventoryItems.length?inventoryItems:DEFAULT_CONFIG.inventoryItems,
+      stockItems: stockItems.length?stockItems:DEFAULT_CONFIG.stockItems,
       wastageItems: DEFAULT_CONFIG.wastageItems,
       wastageReasons: DEFAULT_CONFIG.wastageReasons,
       qualityMenuItems: qualityMenuItems.length?qualityMenuItems:DEFAULT_CONFIG.qualityMenuItems
     };
-    const ok = await storageSet('config', config, true);
-    statusEl.textContent = ok ? 'Saved.' : 'Saved locally for this session (storage unavailable).';
+    const ok = storageSet('config', config);
+    statusEl.textContent = ok ? 'Saved to this device.' : 'Could not save \u2014 your browser may be blocking storage.';
     statusEl.className = 'status-msg ok';
-    setTimeout(() => { screen = 'home'; render(); }, 500);
+    setTimeout(() => { currentScreen = 'home'; render(); }, 500);
   });
   const back = document.getElementById('cfg-back');
-  if(back) back.addEventListener('click', () => { screen='home'; render(); });
+  if(back) back.addEventListener('click', () => { currentScreen='home'; render(); });
 }
 
 /* ============ INIT ============ */
