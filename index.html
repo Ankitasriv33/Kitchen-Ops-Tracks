@@ -106,6 +106,9 @@
   .item-input-row:last-child{border-bottom:none;}
   .item-name{font-size:14px;flex:1;}
   .item-unit{font-size:11px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .item-controls{display:flex;gap:8px;flex-shrink:0;}
+  select.unit-select{width:88px;flex-shrink:0;padding:9px 6px;font-size:12px;font-family:'IBM Plex Mono',monospace;}
+  .item-controls input.num-input{width:70px;}
 
   datalist{}
 </style>
@@ -180,18 +183,33 @@ const DEFAULT_CONFIG = {
     {code:"WR", label:"Wrong Recipe/Batch"}, {code:"OC", label:"Over Cooked"}, {code:"BR", label:"Burnt"}, {code:"OT", label:"Other"}
   ],
   stockItems: [
-    "Wheat Flour","Rice Flour","Rice for Meal","Rice for Staff","Cumin Whole","Black Cardamom",
-    "Green Cardamom Powder","Bay Leaf","Cinnamon","Clove","Ajwain","Nigella Seeds","Black Peppercorns",
-    "Dry Red Chilli","Coriander Whole","Toor Dal","Masoor Dal","Flax Seeds","Fennel Seeds (Saunf)",
-    "Black Mustard Seeds","Peanuts","Jaggery","Tamarind","Tea Powder","Red Chilli Powder",
-    "Coriander Powder","Turmeric Powder","Salt","Besan","Maida","Ghee","Sunflower Oil","Dry Coconut",
-    "Kaju Broken","Kismis","Tape 2\"","Tape 1\"","Tea Flask","Butter Paper","Aluminium Foil",
-    "Black gram/ Black Chana","Dishwasher Gel","Poha","Kitchen Roll","Chana Dal","Chat Masala",
-    "Javitri","Jayfal","Black Salt","Mustard Oil","Sugar","Onion","Tomato","Cauliflower","Lady Finger",
-    "Brinjal","Ginger","Garlic","Peeled Garlic","Coriander Leaf","Lemon","Green Chilli","Ridge Gourd",
-    "Curry Leaf","Tissue","Clean Wrap","Silver Foil","Chai Tube","Wooden Spoon","Cellotape Big",
-    "Cellotape Small","Aluminum Tin Container (Rice) 250 ml","Aluminum Tin Container (Rice) 500 ml",
-    "Curd","Milky Mist Khoya","Egg","Toned Milk","Paneer"
+    {name:"Wheat Flour", unit:"Kg"}, {name:"Rice Flour", unit:"Kg"}, {name:"Rice for Meal", unit:"Kg"},
+    {name:"Rice for Staff", unit:"Kg"}, {name:"Cumin Whole", unit:"Kg"}, {name:"Black Cardamom", unit:"Kg"},
+    {name:"Green Cardamom Powder", unit:"Kg"}, {name:"Bay Leaf", unit:"Kg"}, {name:"Cinnamon", unit:"Kg"},
+    {name:"Clove", unit:"Kg"}, {name:"Ajwain", unit:"Kg"}, {name:"Nigella Seeds", unit:"Kg"},
+    {name:"Black Peppercorns", unit:"Kg"}, {name:"Dry Red Chilli", unit:"Kg"}, {name:"Coriander Whole", unit:"Kg"},
+    {name:"Toor Dal", unit:"Kg"}, {name:"Masoor Dal", unit:"Kg"}, {name:"Flax Seeds", unit:"Kg"},
+    {name:"Fennel Seeds (Saunf)", unit:"Kg"}, {name:"Black Mustard Seeds", unit:"Kg"}, {name:"Peanuts", unit:"Kg"},
+    {name:"Jaggery", unit:"Kg"}, {name:"Tamarind", unit:"Kg"}, {name:"Tea Powder", unit:"Kg"},
+    {name:"Red Chilli Powder", unit:"Kg"}, {name:"Coriander Powder", unit:"Kg"}, {name:"Turmeric Powder", unit:"Kg"},
+    {name:"Salt", unit:"Kg"}, {name:"Besan", unit:"Kg"}, {name:"Maida", unit:"Kg"}, {name:"Ghee", unit:"Kg"},
+    {name:"Sunflower Oil", unit:"Litre"}, {name:"Dry Coconut", unit:"Kg"}, {name:"Kaju Broken", unit:"Kg"},
+    {name:"Kismis", unit:"Kg"}, {name:"Tape 2\"", unit:"Pieces"}, {name:"Tape 1\"", unit:"Pieces"},
+    {name:"Tea Flask", unit:"Pieces"}, {name:"Butter Paper", unit:"Pieces"}, {name:"Aluminium Foil", unit:"Pieces"},
+    {name:"Black gram/ Black Chana", unit:"Kg"}, {name:"Dishwasher Gel", unit:"Litre"}, {name:"Poha", unit:"Kg"},
+    {name:"Kitchen Roll", unit:"Pieces"}, {name:"Chana Dal", unit:"Kg"}, {name:"Chat Masala", unit:"Kg"},
+    {name:"Javitri", unit:"Kg"}, {name:"Jayfal", unit:"Kg"}, {name:"Black Salt", unit:"Kg"},
+    {name:"Mustard Oil", unit:"Litre"}, {name:"Sugar", unit:"Kg"}, {name:"Onion", unit:"Kg"},
+    {name:"Tomato", unit:"Kg"}, {name:"Cauliflower", unit:"Kg"}, {name:"Lady Finger", unit:"Kg"},
+    {name:"Brinjal", unit:"Kg"}, {name:"Ginger", unit:"Kg"}, {name:"Garlic", unit:"Kg"},
+    {name:"Peeled Garlic", unit:"Kg"}, {name:"Coriander Leaf", unit:"Kg"}, {name:"Lemon", unit:"Kg"},
+    {name:"Green Chilli", unit:"Kg"}, {name:"Ridge Gourd", unit:"Kg"}, {name:"Curry Leaf", unit:"Kg"},
+    {name:"Tissue", unit:"Pieces"}, {name:"Clean Wrap", unit:"Pieces"}, {name:"Silver Foil", unit:"Pieces"},
+    {name:"Chai Tube", unit:"Pieces"}, {name:"Wooden Spoon", unit:"Pieces"}, {name:"Cellotape Big", unit:"Pieces"},
+    {name:"Cellotape Small", unit:"Pieces"}, {name:"Aluminum Tin Container (Rice) 250 ml", unit:"Pieces"},
+    {name:"Aluminum Tin Container (Rice) 500 ml", unit:"Pieces"}, {name:"Curd", unit:"Kg"},
+    {name:"Milky Mist Khoya", unit:"Kg"}, {name:"Egg", unit:"Pieces"}, {name:"Toned Milk", unit:"Litre"},
+    {name:"Paneer", unit:"Kg"}
   ],
   qualityMenuItems: [
     "Bihari Chicken Curry","Bihari Fish Curry (Sarso Wali)","Champaran Mutton Curry","Chicken Roti Combo",
@@ -300,6 +318,7 @@ function renderHome(){
   const closingDone = has(e => e.formType==='checklist' && e.sheetName==='Closing Checklist');
   const invAM = has(e => e.formType==='checklist' && e.sheetName==='Kitchen Inventory' && e.shift==='Morning');
   const invPM = has(e => e.formType==='checklist' && e.sheetName==='Kitchen Inventory' && e.shift==='Evening');
+  const invNight = has(e => e.formType==='checklist' && e.sheetName==='Kitchen Inventory' && e.shift==='Night');
   const wastageCheckpoints = new Set(todayLog.filter(e=>e.formType==='wastage').map(e=>e.checkpoint)).size;
   const stockCheckpoints = new Set(todayLog.filter(e=>e.formType==='stock').map(e=>e.checkpoint)).size;
   const poultryDone = has(e => e.formType==='poultry');
@@ -309,7 +328,7 @@ function renderHome(){
   const cards = [
     {id:'morning', title:'Morning Checklist', sub:'Opening tasks', badge: morningDone ? statusBadge('Done','done') : statusBadge('Pending','pending')},
     {id:'closing', title:'Closing Checklist', sub:'End of day shutdown', badge: closingDone ? statusBadge('Done','done') : statusBadge('Pending','pending')},
-    {id:'inventory', title:'Kitchen Inventory', sub:'Cooked items \u2014 AM & PM', badge: (invAM&&invPM) ? statusBadge('Done','done') : (invAM||invPM) ? statusBadge('AM or PM left','partial') : statusBadge('Pending','pending')},
+    {id:'inventory', title:'Kitchen Inventory', sub:'Cooked items \u2014 AM, PM & Night', badge: (invAM&&invPM&&invNight) ? statusBadge('Done','done') : (invAM||invPM||invNight) ? statusBadge([invAM,invPM,invNight].filter(Boolean).length+'/3 shifts','partial') : statusBadge('Pending','pending')},
     {id:'wastage', title:'Wastage Tracker', sub:'Opening \u00b7 2 checkpoints \u00b7 Closing', badge: wastageCheckpoints>=4 ? statusBadge('Done','done') : wastageCheckpoints>0 ? statusBadge(wastageCheckpoints+'/4 logged','partial') : statusBadge('Pending','pending')},
     {id:'stock', title:'Daily Stock', sub:'Start & end of day \u2014 raw materials', badge: stockCheckpoints>=2 ? statusBadge('Done','done') : stockCheckpoints>0 ? statusBadge('1/2 logged','partial') : statusBadge('Pending','pending')},
     {id:'poultry', title:'Poultry Tracker', sub:'Daily inward & balance', badge: poultryDone ? statusBadge('Done','done') : statusBadge('Pending','pending')},
@@ -452,6 +471,7 @@ function renderInventoryScreen(){
       <div class="chip-row">
         <div class="chip ${formState.shift==='Morning'?'active':''}" data-shift="Morning">Morning (10:30 AM)</div>
         <div class="chip ${formState.shift==='Evening'?'active':''}" data-shift="Evening">Evening</div>
+        <div class="chip ${formState.shift==='Night'?'active':''}" data-shift="Night">Night</div>
       </div>
       <div class="field-gap">
         <label class="field-label">Chef on duty</label>
@@ -659,15 +679,16 @@ const STOCK_CHECKPOINTS = [
   {id:'start', label:'Start of Day'},
   {id:'end', label:'End of Day'}
 ];
+const STOCK_UNIT_OPTIONS = ['Kg', 'Gms', 'Count', 'Ml', 'Litre'];
 
 function renderStockScreen(){
   if(!formState.checkpoint){
     formState.checkpoint = 'start';
     formState.manager = "";
     formState.values = {};
-    config.stockItems.forEach(name => formState.values[name] = '');
+    config.stockItems.forEach(it => formState.values[it.name] = { qty: '', unit: it.unit || 'Kg' });
   }
-  const filledCount = Object.values(formState.values).filter(v => v !== '').length;
+  const filledCount = Object.values(formState.values).filter(v => v.qty !== '').length;
 
   const app = document.getElementById('app');
   app.innerHTML = `
@@ -690,10 +711,15 @@ function renderStockScreen(){
         </select>
       </div>
       <div class="task-list">
-        ${config.stockItems.map((name,i) => `
+        ${config.stockItems.map((it,i) => `
           <div class="item-input-row">
-            <div class="item-name">${name}</div>
-            <input type="number" min="0" step="0.01" class="num-input" data-item="${i}" placeholder="0" value="${formState.values[name]}">
+            <div class="item-name">${it.name}</div>
+            <div class="item-controls">
+              <select class="unit-select" data-unit="${i}">
+                ${STOCK_UNIT_OPTIONS.map(u=>`<option value="${u}" ${formState.values[it.name].unit===u?'selected':''}>${u}</option>`).join('')}
+              </select>
+              <input type="number" min="0" step="0.01" class="num-input" data-item="${i}" placeholder="0" value="${formState.values[it.name].qty}">
+            </div>
           </div>
         `).join('')}
       </div>
@@ -716,7 +742,13 @@ function renderStockScreen(){
   document.querySelectorAll('input[data-item]').forEach(inp => {
     inp.addEventListener('input', e => {
       const idx = parseInt(e.target.getAttribute('data-item'));
-      formState.values[config.stockItems[idx]] = e.target.value;
+      formState.values[config.stockItems[idx].name].qty = e.target.value;
+    });
+  });
+  document.querySelectorAll('select[data-unit]').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const idx = parseInt(e.target.getAttribute('data-unit'));
+      formState.values[config.stockItems[idx].name].unit = e.target.value;
     });
   });
   document.getElementById('submit-btn').addEventListener('click', submitStock);
@@ -728,11 +760,12 @@ async function submitStock(){
   const submittedAt = nowStamp();
   const isStart = formState.checkpoint === 'start';
   const items = config.stockItems
-    .filter(name => formState.values[name] !== '')
-    .map(name => {
-      const entry = { name };
-      if(isStart) entry.startStock = formState.values[name];
-      else entry.endStock = formState.values[name];
+    .filter(it => formState.values[it.name].qty !== '')
+    .map(it => {
+      const v = formState.values[it.name];
+      const entry = { name: it.name, unit: v.unit };
+      if(isStart) entry.startStock = v.qty;
+      else entry.endStock = v.qty;
       return entry;
     });
   const payload = { formType:'stock', date: todayStr(), checkpoint: formState.checkpoint, manager: formState.manager, items, submittedAt };
@@ -740,6 +773,7 @@ async function submitStock(){
   await logSubmission({ formType:'stock', checkpoint: formState.checkpoint, manager: formState.manager, submittedAt });
   showStamp(`${STOCK_CHECKPOINTS.find(c=>c.id===formState.checkpoint).label} \u00b7 ${formState.manager}`);
 }
+
 
 /* ============ POULTRY TRACKER ============ */
 function renderPoultryScreen(){
@@ -956,8 +990,8 @@ function renderSetup(firstRun){
       <label class="field-label">Kitchen Inventory items (one per line)</label>
       <textarea id="cfg-inventory" style="min-height:200px;">${config.inventoryItems.join('\n')}</textarea>
 
-      <label class="field-label">Daily Stock items \u2014 start/end of day (one per line)</label>
-      <textarea id="cfg-stock" style="min-height:200px;">${config.stockItems.join('\n')}</textarea>
+      <label class="field-label">Daily Stock items \u2014 start/end of day (one per line, format: Item | Unit)</label>
+      <textarea id="cfg-stock" style="min-height:200px;">${config.stockItems.map(it=>`${it.name} | ${it.unit}`).join('\n')}</textarea>
 
       <label class="field-label">Quality Tasting menu list (one per line, for autocomplete)</label>
       <textarea id="cfg-quality" style="min-height:160px;">${config.qualityMenuItems.join('\n')}</textarea>
@@ -977,7 +1011,10 @@ function attachSetupHandlers(){
     const morningTasks = document.getElementById('cfg-morning').value.split('\n').map(s=>s.trim()).filter(Boolean);
     const closingTasks = document.getElementById('cfg-closing').value.split('\n').map(s=>s.trim()).filter(Boolean);
     const inventoryItems = document.getElementById('cfg-inventory').value.split('\n').map(s=>s.trim()).filter(Boolean);
-    const stockItems = document.getElementById('cfg-stock').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const stockItems = document.getElementById('cfg-stock').value.split('\n').map(s=>s.trim()).filter(Boolean).map(line => {
+      const parts = line.split('|').map(p=>p.trim());
+      return { name: parts[0], unit: parts[1] || 'Pieces' };
+    });
     const qualityMenuItems = document.getElementById('cfg-quality').value.split('\n').map(s=>s.trim()).filter(Boolean);
     const statusEl = document.getElementById('cfg-status');
     if(!url){ statusEl.textContent = 'Add the Web App URL.'; statusEl.className = 'status-msg err'; return; }
